@@ -1,6 +1,6 @@
 module github.com/revanite-io/pvtr-aws-s3 // Replace this globally with your module name
 
-go 1.25.1
+go 1.26.1
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.12
