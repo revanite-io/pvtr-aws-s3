@@ -1,0 +1,8 @@
+allowed_ips = ["203.0.113.1/32"]
+
+# Optional overrides:
+# region                     = "us-east-1"
+# bucket_name                = "pvtr-aws-s3-test"
+# object_lock_mode           = "GOVERNANCE"  # COMPLIANCE is default and cannot be overridden
+# object_lock_retention_days = 1
+# log_retention_days         = 90
