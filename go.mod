@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.55.8
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.97.1
 	github.com/gemaraproj/go-gemara v0.0.2
-	github.com/privateerproj/privateer-sdk v1.20.0
+	github.com/privateerproj/privateer-sdk v1.21.0
 )
 
 require (
