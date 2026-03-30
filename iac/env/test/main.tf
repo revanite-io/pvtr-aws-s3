@@ -14,9 +14,8 @@ provider "aws" {
 }
 
 module "pvtr_aws_s3" {
-  source = "../../terraform/modules/pvtr-aws-s3"
+  source = "git::https://github.com/revanite-io/pvtr-terraform.git//modules/pvtr-aws-s3?ref=9f8ca38296b4ad4b264b997ff6427285ca7aafdb" # v0.1.0
 
-  region                    = var.region
   bucket_name               = var.bucket_name
   allowed_ips               = var.allowed_ips
   object_lock_mode          = var.object_lock_mode
