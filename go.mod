@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.14
 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.55.9
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.0
-	github.com/gemaraproj/go-gemara v0.1.1
+	github.com/gemaraproj/go-gemara v0.0.2
 	github.com/privateerproj/privateer-sdk v1.22.1
 )
 
