@@ -5,9 +5,9 @@ go 1.26.2
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.17
 	github.com/aws/aws-sdk-go-v2/service/cloudtrail v1.55.11
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.100.1
-	github.com/gemaraproj/go-gemara v0.4.0
-	github.com/privateerproj/privateer-sdk v1.24.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
+	github.com/gemaraproj/go-gemara v0.5.0
+	github.com/privateerproj/privateer-sdk v1.24.1
 )
 
 require (
@@ -45,7 +45,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
-	github.com/hashicorp/go-plugin v1.7.0 // indirect
+	github.com/hashicorp/go-plugin v1.8.0 // indirect
 	github.com/hashicorp/yamux v0.1.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
