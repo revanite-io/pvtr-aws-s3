@@ -361,64 +361,6 @@ func VersionsRetainedOnDeletion(payloadData any) (result gemara.Result, message 
 	return gemara.NeedsReview, "Versioning is enabled. Manual verification required to confirm that versions are retained when an object is deleted, allowing recovery", confidence
 }
 
-// --- CN06: Access Logging ---
-
-// AccessLoggingConfigured verifies that access logs are stored in a separate data store.
-func AccessLoggingConfigured(payloadData any) (result gemara.Result, message string, confidence gemara.ConfidenceLevel) {
-	payload, message := reusable_steps.VerifyPayload(payloadData)
-	if message != "" {
-		return gemara.Unknown, message, confidence
-	}
-
-	// Check S3 server access logging
-	s3LoggingEnabled := payload.Logging != nil && payload.Logging.Enabled &&
-		payload.Logging.TargetBucket != nil && *payload.Logging.TargetBucket != ""
-
-	// Check CloudTrail data events
-	cloudTrailEnabled := payload.CloudTrail != nil && payload.CloudTrail.DataEventsLogged
-
-	if !s3LoggingEnabled && !cloudTrailEnabled {
-		return gemara.Failed, "Neither S3 server access logging nor CloudTrail data events are configured for this bucket", confidence
-	}
-
-	if s3LoggingEnabled && cloudTrailEnabled {
-		return gemara.Passed, "Both S3 server access logging and CloudTrail data events are configured, storing access logs in separate data stores", confidence
-	}
-
-	if s3LoggingEnabled {
-		return gemara.Passed, "S3 server access logging is configured, storing access logs in a separate bucket", confidence
-	}
-
-	return gemara.Passed, "CloudTrail data events are configured for this bucket, storing access logs in a separate data store", confidence
-}
-
-// LogBucketHighestSensitivity verifies that the log bucket is classified at the highest sensitivity level.
-func LogBucketHighestSensitivity(payloadData any) (result gemara.Result, message string, confidence gemara.ConfidenceLevel) {
-	payload, message := reusable_steps.VerifyPayload(payloadData)
-	if message != "" {
-		return gemara.Unknown, message, confidence
-	}
-
-	if payload.Logging == nil || !payload.Logging.Enabled {
-		return gemara.NeedsReview, "S3 server access logging is not configured. If CloudTrail is used for logging, the CloudTrail S3 bucket should be classified at the highest sensitivity level. Manual verification required", confidence
-	}
-
-	if payload.Logging.LogBucketTags == nil {
-		return gemara.NeedsReview, "Log bucket tags not available. Manual verification required to confirm the log bucket is classified at the highest sensitivity level", confidence
-	}
-
-	sensitivity, ok := payload.Logging.LogBucketTags["sensitivity"]
-	if !ok {
-		return gemara.Failed, "Log bucket does not have a 'sensitivity' tag", confidence
-	}
-
-	if sensitivity != "high" {
-		return gemara.Failed, "Log bucket sensitivity tag is '" + sensitivity + "', expected 'high'", confidence
-	}
-
-	return gemara.Passed, "Log bucket is tagged with sensitivity=high, classified at the highest sensitivity level", confidence
-}
-
 // --- CN07: MFA Delete ---
 
 // MfaDeleteSupported verifies that MFA Delete is available as a configuration option.

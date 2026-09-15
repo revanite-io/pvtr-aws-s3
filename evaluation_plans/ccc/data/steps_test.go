@@ -60,8 +60,8 @@ func TestKMSEncryptionConfigured(t *testing.T) {
 			wantResult: gemara.Failed,
 		},
 		{
-			name: "nil Encryption returns Unknown",
-			payload: d.Payload{},
+			name:       "nil Encryption returns Unknown",
+			payload:    d.Payload{},
 			wantResult: gemara.Unknown,
 		},
 		{
@@ -554,119 +554,6 @@ func TestNewVersionOnModification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, _, _ := NewVersionOnModification(tt.payload)
-			if result != tt.wantResult {
-				t.Errorf("got %v, want %v", result, tt.wantResult)
-			}
-		})
-	}
-}
-
-// --- AccessLoggingConfigured ---
-
-func TestAccessLoggingConfigured(t *testing.T) {
-	tests := []struct {
-		name       string
-		payload    any
-		wantResult gemara.Result
-	}{
-		{
-			name: "S3 logging enabled returns Passed",
-			payload: d.Payload{
-				Logging: &d.LoggingData{
-					Enabled:      true,
-					TargetBucket: ptr("my-log-bucket"),
-				},
-			},
-			wantResult: gemara.Passed,
-		},
-		{
-			name: "CloudTrail enabled returns Passed",
-			payload: d.Payload{
-				CloudTrail: &d.CloudTrailData{DataEventsLogged: true},
-			},
-			wantResult: gemara.Passed,
-		},
-		{
-			name: "both enabled returns Passed",
-			payload: d.Payload{
-				Logging: &d.LoggingData{
-					Enabled:      true,
-					TargetBucket: ptr("my-log-bucket"),
-				},
-				CloudTrail: &d.CloudTrailData{DataEventsLogged: true},
-			},
-			wantResult: gemara.Passed,
-		},
-		{
-			name:       "neither enabled returns Failed",
-			payload:    d.Payload{},
-			wantResult: gemara.Failed,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, _, _ := AccessLoggingConfigured(tt.payload)
-			if result != tt.wantResult {
-				t.Errorf("got %v, want %v", result, tt.wantResult)
-			}
-		})
-	}
-}
-
-// --- LogBucketHighestSensitivity ---
-
-func TestLogBucketHighestSensitivity(t *testing.T) {
-	tests := []struct {
-		name       string
-		payload    any
-		wantResult gemara.Result
-	}{
-		{
-			name: "log bucket tagged high returns Passed",
-			payload: d.Payload{
-				Logging: &d.LoggingData{
-					Enabled:       true,
-					LogBucketTags: map[string]string{"sensitivity": "high"},
-				},
-			},
-			wantResult: gemara.Passed,
-		},
-		{
-			name: "log bucket tagged low returns Failed",
-			payload: d.Payload{
-				Logging: &d.LoggingData{
-					Enabled:       true,
-					LogBucketTags: map[string]string{"sensitivity": "low"},
-				},
-			},
-			wantResult: gemara.Failed,
-		},
-		{
-			name: "log bucket no sensitivity tag returns Failed",
-			payload: d.Payload{
-				Logging: &d.LoggingData{
-					Enabled:       true,
-					LogBucketTags: map[string]string{"other": "tag"},
-				},
-			},
-			wantResult: gemara.Failed,
-		},
-		{
-			name: "no tags available returns NeedsReview",
-			payload: d.Payload{
-				Logging: &d.LoggingData{Enabled: true},
-			},
-			wantResult: gemara.NeedsReview,
-		},
-		{
-			name:       "no logging returns NeedsReview",
-			payload:    d.Payload{},
-			wantResult: gemara.NeedsReview,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, _, _ := LogBucketHighestSensitivity(tt.payload)
 			if result != tt.wantResult {
 				t.Errorf("got %v, want %v", result, tt.wantResult)
 			}
