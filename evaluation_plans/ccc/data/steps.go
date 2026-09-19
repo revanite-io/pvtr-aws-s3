@@ -1,6 +1,8 @@
 package data
 
 import (
+	"fmt"
+
 	"github.com/gemaraproj/go-gemara"
 
 	"github.com/revanite-io/pvtr-aws-s3/evaluation_plans/reusable_steps"
@@ -322,7 +324,14 @@ func NewVersionOnModification(payloadData any) (result gemara.Result, message st
 		return gemara.Failed, "Versioning is not enabled, so new versions cannot be created on modification", confidence
 	}
 
-	return gemara.NeedsReview, "Versioning is enabled. Manual verification required to confirm that modifying an object creates a new version with a unique identifier", confidence
+	sample := payload.ObjectVersions
+	if sample == nil {
+		return gemara.NeedsReview, "Versioning is enabled but no object version sample is available. Manual verification required to confirm that modifying an object creates a new version", confidence
+	}
+	if sample.ModifiedWithHistory > 0 {
+		return gemara.Passed, fmt.Sprintf("Versioning is enabled and %d sampled object(s) have both a latest version and noncurrent history, demonstrating modification creates a new version", sample.ModifiedWithHistory), gemara.High
+	}
+	return gemara.NeedsReview, "Versioning is enabled but no modified object with noncurrent versions was observed in the sample. Modify an object and re-run, or verify manually", confidence
 }
 
 // PreviousVersionsRecoverable verifies that previous versions of objects can be recovered.
@@ -340,7 +349,14 @@ func PreviousVersionsRecoverable(payloadData any) (result gemara.Result, message
 		return gemara.Failed, "Versioning is not enabled, so previous versions cannot be recovered", confidence
 	}
 
-	return gemara.NeedsReview, "Versioning is enabled. Manual verification required to confirm that previous versions of objects can be recovered after modification", confidence
+	sample := payload.ObjectVersions
+	if sample == nil {
+		return gemara.NeedsReview, "Versioning is enabled but no object version sample is available. Manual verification required to confirm previous versions are recoverable", confidence
+	}
+	if sample.NoncurrentCount > 0 {
+		return gemara.Passed, fmt.Sprintf("Versioning is enabled and %d noncurrent version(s) are present and listable, so previous versions are recoverable", sample.NoncurrentCount), gemara.High
+	}
+	return gemara.NeedsReview, "Versioning is enabled but no noncurrent versions were observed in the sample to demonstrate recoverability. Modify an object and re-run, or verify manually", confidence
 }
 
 // VersionsRetainedOnDeletion verifies that versions are retained when an object is deleted.
@@ -358,7 +374,14 @@ func VersionsRetainedOnDeletion(payloadData any) (result gemara.Result, message 
 		return gemara.Failed, "Versioning is not enabled, so versions cannot be retained on deletion", confidence
 	}
 
-	return gemara.NeedsReview, "Versioning is enabled. Manual verification required to confirm that versions are retained when an object is deleted, allowing recovery", confidence
+	sample := payload.ObjectVersions
+	if sample == nil {
+		return gemara.NeedsReview, "Versioning is enabled but no object version sample is available. Manual verification required to confirm versions are retained on deletion", confidence
+	}
+	if sample.DeleteMarkersRetained > 0 {
+		return gemara.Passed, fmt.Sprintf("Versioning is enabled and %d deleted object(s) in the sample have delete markers with data versions still retained, demonstrating versions survive deletion", sample.DeleteMarkersRetained), gemara.High
+	}
+	return gemara.NeedsReview, "Versioning is enabled but no delete marker with retained versions was observed in the sample. Delete a test object and re-run, or verify manually", confidence
 }
 
 // --- CN07: MFA Delete ---

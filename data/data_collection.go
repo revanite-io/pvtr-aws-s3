@@ -39,9 +39,23 @@ type Payload struct {
 	// CloudTrail data event logging
 	CloudTrail *CloudTrailData
 
+	// Sampled object version evidence for the versioning checks.
+	// Nil when versioning is not enabled or the sample could not be listed.
+	ObjectVersions *ObjectVersionsData
+
 	// Resource metadata
 	BucketName string
 	Region     string
+}
+
+// ObjectVersionsData summarizes a sample of the bucket's object versions.
+// Counts come from a bounded ListObjectVersions call, so they are evidence
+// of observed behavior, not a full inventory.
+type ObjectVersionsData struct {
+	SampledCount          int // total entries sampled (versions + delete markers)
+	NoncurrentCount       int // versions that are not the latest for their key
+	ModifiedWithHistory   int // keys with a latest version plus noncurrent history
+	DeleteMarkersRetained int // delete-marker keys that still retain data versions
 }
 
 // VersioningData contains S3 bucket versioning configuration.
@@ -154,8 +168,69 @@ func LoadWithOptions(cfg *config.Config, opts ...Option) (any, error) {
 	payload.Logging = fetchLogging(ctx, options.s3Client, bucketName)
 	payload.BucketPolicy = fetchBucketPolicy(ctx, options.s3Client, bucketName)
 	payload.CloudTrail = fetchCloudTrail(ctx, options.cloudTrailClient, bucketName)
+	if payload.Versioning != nil && payload.Versioning.Status != nil && *payload.Versioning.Status == "Enabled" {
+		payload.ObjectVersions = fetchObjectVersions(ctx, options.s3Client, bucketName)
+	}
 
 	return payload, nil
+}
+
+// objectVersionSampleLimit bounds the version listing so large buckets do not
+// stall the loader; the sample only needs to observe versioning behavior.
+const objectVersionSampleLimit int32 = 1000
+
+func fetchObjectVersions(ctx context.Context, client S3Client, bucketName string) *ObjectVersionsData {
+	limit := objectVersionSampleLimit
+	resp, err := client.ListObjectVersions(ctx, &s3.ListObjectVersionsInput{
+		Bucket:  &bucketName,
+		MaxKeys: &limit,
+	})
+	if err != nil {
+		return nil
+	}
+
+	type keyHistory struct {
+		latest     bool
+		noncurrent int
+	}
+	histories := map[string]*keyHistory{}
+
+	sample := &ObjectVersionsData{SampledCount: len(resp.Versions) + len(resp.DeleteMarkers)}
+	for _, version := range resp.Versions {
+		if version.Key == nil {
+			continue
+		}
+		history := histories[*version.Key]
+		if history == nil {
+			history = &keyHistory{}
+			histories[*version.Key] = history
+		}
+		if version.IsLatest != nil && *version.IsLatest {
+			history.latest = true
+		} else {
+			history.noncurrent++
+			sample.NoncurrentCount++
+		}
+	}
+
+	for _, history := range histories {
+		if history.latest && history.noncurrent > 0 {
+			sample.ModifiedWithHistory++
+		}
+	}
+
+	markerKeys := map[string]bool{}
+	for _, marker := range resp.DeleteMarkers {
+		if marker.Key != nil {
+			markerKeys[*marker.Key] = true
+		}
+	}
+	for key := range markerKeys {
+		if histories[key] != nil {
+			sample.DeleteMarkersRetained++
+		}
+	}
+	return sample
 }
 
 func fetchBucketLocation(ctx context.Context, client S3Client, bucketName string) (string, error) {
