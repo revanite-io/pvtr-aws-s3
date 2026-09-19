@@ -532,3 +532,69 @@ func TestLoadWithOptions_CloudTrailAdvancedSelector(t *testing.T) {
 // Type aliases to keep test code concise
 type cloudtrailOutput = cloudtrail.DescribeTrailsOutput
 type selectorsOutput = cloudtrail.GetEventSelectorsOutput
+
+// --- Object version sampling ---
+
+func versionSamplingClient(list *s3.ListObjectVersionsOutput, listErr error) *mockS3Client {
+	return &mockS3Client{
+		versioningResp:   &s3.GetBucketVersioningOutput{Status: s3types.BucketVersioningStatusEnabled},
+		listVersionsResp: list,
+		listVersionsErr:  listErr,
+	}
+}
+
+func TestLoadWithOptions_ObjectVersionSample(t *testing.T) {
+	mock := versionSamplingClient(&s3.ListObjectVersionsOutput{
+		Versions: []s3types.ObjectVersion{
+			{Key: ptr("modified.txt"), IsLatest: ptr(true)},
+			{Key: ptr("modified.txt"), IsLatest: ptr(false)},
+			{Key: ptr("removed.txt"), IsLatest: ptr(false)},
+			{Key: ptr("untouched.txt"), IsLatest: ptr(true)},
+		},
+		DeleteMarkers: []s3types.DeleteMarkerEntry{
+			{Key: ptr("removed.txt"), IsLatest: ptr(true)},
+		},
+	}, nil)
+
+	result, err := LoadWithOptions(testConfig("my-bucket"), WithS3Client(mock), WithCloudTrailClient(&mockCloudTrailClient{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sample := result.(Payload).ObjectVersions
+	if sample == nil {
+		t.Fatal("ObjectVersions is nil")
+	}
+	if sample.SampledCount != 5 || sample.NoncurrentCount != 2 {
+		t.Errorf("SampledCount=%d NoncurrentCount=%d, want 5 and 2", sample.SampledCount, sample.NoncurrentCount)
+	}
+	if sample.ModifiedWithHistory != 1 {
+		t.Errorf("ModifiedWithHistory=%d, want 1", sample.ModifiedWithHistory)
+	}
+	if sample.DeleteMarkersRetained != 1 {
+		t.Errorf("DeleteMarkersRetained=%d, want 1", sample.DeleteMarkersRetained)
+	}
+}
+
+func TestLoadWithOptions_ObjectVersionsSkippedWhenVersioningDisabled(t *testing.T) {
+	mock := &mockS3Client{
+		versioningResp: &s3.GetBucketVersioningOutput{Status: s3types.BucketVersioningStatusSuspended},
+	}
+	result, err := LoadWithOptions(testConfig("my-bucket"), WithS3Client(mock), WithCloudTrailClient(&mockCloudTrailClient{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.(Payload).ObjectVersions != nil {
+		t.Error("ObjectVersions should be nil when versioning is not enabled")
+	}
+}
+
+func TestLoadWithOptions_ObjectVersionListErrorLeavesNil(t *testing.T) {
+	mock := versionSamplingClient(nil, errors.New("list failed"))
+	result, err := LoadWithOptions(testConfig("my-bucket"), WithS3Client(mock), WithCloudTrailClient(&mockCloudTrailClient{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.(Payload).ObjectVersions != nil {
+		t.Error("ObjectVersions should be nil when listing fails")
+	}
+}

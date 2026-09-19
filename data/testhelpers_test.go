@@ -29,6 +29,18 @@ type mockS3Client struct {
 	taggingErr          error
 	locationResp        *s3.GetBucketLocationOutput
 	locationErr         error
+	listVersionsResp    *s3.ListObjectVersionsOutput
+	listVersionsErr     error
+}
+
+func (m *mockS3Client) ListObjectVersions(ctx context.Context, params *s3.ListObjectVersionsInput, optFns ...func(*s3.Options)) (*s3.ListObjectVersionsOutput, error) {
+	if m.listVersionsErr != nil {
+		return nil, m.listVersionsErr
+	}
+	if m.listVersionsResp != nil {
+		return m.listVersionsResp, nil
+	}
+	return &s3.ListObjectVersionsOutput{}, nil
 }
 
 func (m *mockS3Client) GetBucketVersioning(ctx context.Context, params *s3.GetBucketVersioningInput, optFns ...func(*s3.Options)) (*s3.GetBucketVersioningOutput, error) {
