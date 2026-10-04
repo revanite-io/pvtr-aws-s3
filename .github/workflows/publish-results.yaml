@@ -48,6 +48,9 @@ jobs:
     permissions:
       contents: read # The scanner reads this repository through the job token
       id-token: write # Trusted publishing to the hub and the Sigstore signing identity
+      # The called workflow's report job requests it, and GitHub checks every
+      # called job at startup, even one that upload-sarif: false skips.
+      security-events: write
     # Pinned by tag, not SHA, on purpose: the hub compares the signing
     # certificate's workflow ref to this exact tag and rejects a SHA-pinned
     # call. Preview trusts v1.0.0-rc; switch to @v1 and drop `hub` for prod.
